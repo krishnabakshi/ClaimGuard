@@ -12,10 +12,10 @@ const OUT = path.join(__dirname, "ClaimGuard.pptx");
 const TEAM = [["Krishna Bakshi", "24CSU297", "Data, notebook, MLflow training, model choice, report"], ["Naman Sharma", "24CSU287", "API, UI, tests, Docker, CI, deployment, slides"]];
 const SECTION = "<Section>";
 const LINKS = {
-  repo: "https://github.com/<user>/claimguard",
-  live: "https://<app>.onrender.com",
-  docs: "https://<app>.onrender.com/docs",
-  report: "<link to Name_RollNo.pdf>",
+  repo: "https://github.com/krishnabakshi/ClaimGuard",
+  live: "https://claimguard-rnu5.onrender.com",
+  docs: "https://claimguard-rnu5.onrender.com/docs",
+  report: "https://github.com/krishnabakshi/ClaimGuard/blob/main/docs/report/report.pdf",
 };
 // --------------------------------------------------------------------------
 

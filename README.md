@@ -6,9 +6,9 @@ ClaimGuard scores a vehicle-insurance claim for fraud risk and tells the claims 
 
 | | |
 |---|---|
-| **Live app** | `<add live URL after deployment>` |
-| **API docs** | `<live URL>/docs` |
-| **Report** | `<link to Name_RollNo.pdf>` |
+| **Live app** | [https://claimguard-rnu5.onrender.com](https://claimguard-rnu5.onrender.com) (Render free tier: the first request after idle can take about 50 s) |
+| **API docs** | [https://claimguard-rnu5.onrender.com/docs](https://claimguard-rnu5.onrender.com/docs) |
+| **Report** | [docs/report/report.pdf](docs/report/report.pdf) |
 
 ---
 
@@ -176,7 +176,7 @@ Run 6 has a slightly higher F1, but it catches only a third of the frauds, so it
 
 ## 8. Deployment and monitoring
 
-* Deployed as a Docker container on `<Render / Railway / EC2>` with a restart policy (`--restart unless-stopped` on a VM; the platform's auto-restart on Render/Railway). The container reads `$PORT` when the platform sets one.
+* Deployed as a Docker container on **Render** (free tier, Docker runtime) at https://claimguard-rnu5.onrender.com, defined in `render.yaml` with a `/health` health check. Render restarts the container automatically if it crashes or fails the health check, and redeploys on every push to `main`. The container reads `$PORT` when the platform sets one.
 * **Prediction logging:** every `/predict` input, its probability and label are appended as one JSON line to `logs/predictions.jsonl` (rotating file). A sample log is in `docs/sample_predictions.jsonl`.
 * **Bonus: drift check.** `python drift_check.py` compares logged inputs with the training data: the mean/std of numeric features (flagged above 0.5 training standard deviations) and category shares (flagged above 15 percentage points). It exits with code 1 on drift, so a scheduled job could trigger retraining.
 

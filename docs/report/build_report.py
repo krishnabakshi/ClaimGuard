@@ -13,8 +13,8 @@ TEAM = [  # (name, roll number, contribution)
     ("Naman Sharma", "24CSU287", "FastAPI app and Pydantic validation, UI, pytest suite, Dockerfile, GitHub Actions CI, deployment and drift check, slides"),
 ]
 SECTION = "&lt;Section&gt;"
-LIVE_URL = "&lt;live URL&gt;"
-REPO_URL = "&lt;GitHub repository URL&gt;"
+LIVE_URL = '<a href="https://claimguard-rnu5.onrender.com">https://claimguard-rnu5.onrender.com</a>'
+REPO_URL = '<a href="https://github.com/krishnabakshi/ClaimGuard">https://github.com/krishnabakshi/ClaimGuard</a>'
 
 
 def img(rel, width="100%"):
