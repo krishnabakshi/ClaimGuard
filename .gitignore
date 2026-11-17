@@ -1,0 +1,22 @@
+# Environments
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# MLflow: run artifacts are large; mlflow.db (params + metrics) IS committed
+mlruns/
+mlartifacts/
+
+# Runtime prediction logs (a sample is kept in docs/sample_predictions.jsonl)
+logs/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

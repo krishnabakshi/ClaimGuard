@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClaimGuard</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --ink: #14171f; --muted: #5b6270; --line: #dfe3ea;
+    --accent: #2b59c3; --low: #1f8a4c; --med: #b7791f; --high: #c53030;
+    --low-bg: #e7f6ee; --med-bg: #fdf3e1; --high-bg: #fdeaea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11141a; --card: #1a1e26; --ink: #e8ebf0; --muted: #9aa3b2; --line: #2c323d;
+      --accent: #7aa2ff; --low: #5fd394; --med: #f0b54f; --high: #ff7b7b;
+      --low-bg: #16291f; --med-bg: #2e2516; --high-bg: #321a1c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 28px 16px 64px; }
+  h1 { margin: 0; font-size: 1.6rem; }
+  header p { margin: 4px 0 20px; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 8px; }
+  h2:first-child { margin-top: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 14px; }
+  label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: 3px; }
+  select, input { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; align-items: center; }
+  button { padding: 10px 18px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); font-weight: 500; padding: 8px 12px; }
+  #result { display: none; }
+  .verdict { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 10px; }
+  .verdict.low { background: var(--low-bg); color: var(--low); }
+  .verdict.medium { background: var(--med-bg); color: var(--med); }
+  .verdict.high { background: var(--high-bg); color: var(--high); }
+  .verdict strong { font-size: 1.2rem; }
+  .pct { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bar { position: relative; height: 8px; background: var(--line); border-radius: 4px; margin: 12px 0 4px; }
+  .bar > div { height: 100%; width: 0; border-radius: 4px; transition: width .4s; }
+  .bar > span { position: absolute; top: -4px; width: 2px; height: 16px; background: var(--ink); }
+  .note { font-size: .8rem; color: var(--muted); }
+  ul { margin: 10px 0 0; padding-left: 20px; } li { margin-bottom: 6px; }
+  .error { display: none; background: var(--high-bg); color: var(--high); border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: .9rem; white-space: pre-wrap; }
+  footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 20px; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🛡️ ClaimGuard</h1>
+    <p>Vehicle-insurance fraud triage. Enter a claim's details to get a fraud-risk score and what to check before paying.</p>
+  </header>
+
+  <form class="card" id="form">
+    <div id="sections"></div>
+    <div class="actions">
+      <button type="submit">Score claim</button>
+      <button type="button" class="ghost" data-example="risky">Load suspicious example</button>
+      <button type="button" class="ghost" data-example="routine">Load routine example</button>
+      <button type="button" class="ghost" data-example="invalid">Send invalid input (expect 422)</button>
+    </div>
+    <div class="error" id="error"></div>
+  </form>
+
+  <section class="card" id="result">
+    <div class="verdict" id="verdict">
+      <div><strong id="label"></strong><div id="risk" style="font-size:.9rem"></div></div>
+      <div class="pct" id="pct"></div>
+    </div>
+    <div class="bar"><div id="fill"></div><span id="mark"></span></div>
+    <div class="note" id="thrnote"></div>
+    <h3 style="margin:16px 0 0;font-size:1rem">What to check</h3>
+    <ul id="tips"></ul>
+  </section>
+
+  <footer>CSL236 end-term project · <a href="/docs">API docs</a> · <a href="/health">health</a></footer>
+</main>
+
+<script>
+const SECTIONS = [
+  ["Policy holder", [
+    ["age", "Age (16–80)", "num", 16, 80, 38],
+    ["sex", "Sex", ["Female", "Male"], "Male"],
+    ["marital_status", "Marital status", ["Single", "Married", "Divorced", "Widow"], "Married"],
+    ["driver_rating", "Driver rating (1–4)", "num", 1, 4, 2],
+    ["past_number_of_claims", "Past claims", ["none", "1", "2 to 4", "more than 4"], "2 to 4"],
+    ["address_change_claim", "Address changed before claim", ["no change", "under 6 months", "1 year", "2 to 3 years", "4 to 8 years"], "no change"],
+    ["number_of_cars", "Cars on policy", ["1 vehicle", "2 vehicles", "3 to 4", "5 to 8", "more than 8"], "1 vehicle"],
+  ]],
+  ["Policy and vehicle", [
+    ["base_policy", "Base policy", ["Liability", "Collision", "All Perils"], "Collision"],
+    ["deductible", "Deductible (300–700)", "num", 300, 700, 400],
+    ["agent_type", "Sold by agent", ["External", "Internal"], "External"],
+    ["vehicle_category", "Vehicle category", ["Sedan", "Sport", "Utility"], "Sedan"],
+    ["make", "Make", ["Pontiac", "Toyota", "Honda", "Mazda", "Chevrolet", "Acura", "Ford", "VW", "Dodge", "Saab", "Mercury", "Saturn", "Other"], "Toyota"],
+    ["vehicle_price", "Vehicle price (USD)", ["less than 20000", "20000 to 29000", "30000 to 39000", "40000 to 59000", "60000 to 69000", "more than 69000"], "20000 to 29000"],
+    ["age_of_vehicle", "Vehicle age", ["new", "2 years", "3 years", "4 years", "5 years", "6 years", "7 years", "more than 7"], "7 years"],
+  ]],
+  ["Accident and claim", [
+    ["fault", "At fault", ["Third Party", "Policy Holder"], "Policy Holder"],
+    ["accident_area", "Accident area", ["Rural", "Urban"], "Urban"],
+    ["police_report_filed", "Police report filed", ["No", "Yes"], "No"],
+    ["witness_present", "Witness present", ["No", "Yes"], "No"],
+    ["days_policy_accident", "Days from policy start to accident", ["none", "1 to 7", "8 to 15", "15 to 30", "more than 30"], "more than 30"],
+    ["claim_delay_weeks", "Weeks from accident to claim (0–52)", "num", 0, 52, 1],
+    ["number_of_supplements", "Supplements on claim", ["none", "1 to 2", "3 to 5", "more than 5"], "none"],
+  ]],
+];
+const EXAMPLES = {
+  risky: {age: 24, sex: "Male", marital_status: "Single", driver_rating: 2, past_number_of_claims: "none",
+          address_change_claim: "under 6 months", number_of_cars: "1 vehicle", base_policy: "All Perils", deductible: 400,
+          agent_type: "External", vehicle_category: "Utility", make: "Acura", vehicle_price: "more than 69000", age_of_vehicle: "new",
+          fault: "Policy Holder", accident_area: "Rural", police_report_filed: "No", witness_present: "No",
+          days_policy_accident: "1 to 7", claim_delay_weeks: 6, number_of_supplements: "none"},
+  routine: {age: 45, sex: "Female", marital_status: "Married", driver_rating: 1, past_number_of_claims: "2 to 4",
+          address_change_claim: "no change", number_of_cars: "1 vehicle", base_policy: "Liability", deductible: 400,
+          agent_type: "Internal", vehicle_category: "Sport", make: "Toyota", vehicle_price: "20000 to 29000", age_of_vehicle: "7 years",
+          fault: "Third Party", accident_area: "Urban", police_report_filed: "Yes", witness_present: "Yes",
+          days_policy_accident: "more than 30", claim_delay_weeks: 0, number_of_supplements: "more than 5"},
+};
+const $ = id => document.getElementById(id);
+const FIELDS = SECTIONS.flatMap(s => s[1]);
+
+for (const [title, fields] of SECTIONS) {
+  const h = document.createElement("h2"); h.textContent = title; $("sections").appendChild(h);
+  const g = document.createElement("div"); g.className = "grid"; $("sections").appendChild(g);
+  for (const f of fields) {
+    const w = document.createElement("div");
+    if (f[2] === "num") {
+      w.innerHTML = `<label for="${f[0]}">${f[1]}</label><input id="${f[0]}" type="number" step="1" value="${f[5]}">`;
+    } else {
+      w.innerHTML = `<label for="${f[0]}">${f[1]}</label><select id="${f[0]}">${f[2].map(o => `<option${o === f[3] ? " selected" : ""}>${o}</option>`).join("")}</select>`;
+    }
+    g.appendChild(w);
+  }
+}
+
+function collect() {
+  const body = {};
+  for (const f of FIELDS) {
+    const v = $(f[0]).value;
+    body[f[0]] = f[2] === "num" ? (/^-?\d+$/.test(v) ? Number(v) : v) : v;
+  }
+  return body;
+}
+function showError(m) { $("error").textContent = m; $("error").style.display = m ? "block" : "none"; }
+
+async function score(body) {
+  const r = await fetch("/predict", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    $("result").style.display = "none";
+    const lines = Array.isArray(data.detail) ? data.detail.map(d => `• ${(d.loc || []).slice(1).join(".")}: ${d.msg}`).join("\n") : (data.detail || "");
+    showError(`HTTP ${r.status} - input rejected by the data contract:\n${lines}`);
+    return;
+  }
+  showError("");
+  const p = data.fraud_probability, t = data.threshold;
+  $("result").style.display = "block";
+  $("verdict").className = "verdict " + data.risk_level;
+  $("label").textContent = data.label === "suspicious" ? "Suspicious: investigate" : "Routine claim";
+  $("risk").textContent = `Risk level: ${data.risk_level}`;
+  $("pct").textContent = Math.round(p * 100) + "%";
+  const color = getComputedStyle(document.documentElement).getPropertyValue(data.risk_level === "high" ? "--high" : data.risk_level === "medium" ? "--med" : "--low");
+  $("fill").style.width = (p * 100) + "%"; $("fill").style.background = color;
+  $("mark").style.left = (t * 100) + "%";
+  $("thrnote").textContent = `Model fraud score. Claims at or above ${Math.round(t * 100)}% (black mark) are flagged. Only 6% of claims are fraudulent, so this cut-off was tuned for F1 on validation data.`;
+  $("tips").innerHTML = "";
+  for (const tip of data.tips) { const li = document.createElement("li"); li.textContent = tip; $("tips").appendChild(li); }
+  $("result").scrollIntoView({behavior: "smooth", block: "nearest"});
+}
+
+$("form").addEventListener("submit", e => { e.preventDefault(); score(collect()); });
+document.querySelectorAll("[data-example]").forEach(b => b.addEventListener("click", () => {
+  const ex = b.dataset.example;
+  if (ex === "invalid") { score({...collect(), age: 12, fault: "Nobody"}); return; }
+  for (const [k, v] of Object.entries(EXAMPLES[ex])) $(k).value = v;
+  score(collect());
+}));
+</script>
+</body>
+</html>
