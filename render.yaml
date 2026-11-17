@@ -1,0 +1,12 @@
+# Render Blueprint: New -> Blueprint -> pick this repo. Builds the Dockerfile and
+# serves it on Render's free tier; Render restarts the container if it crashes
+# or fails the /health check, and redeploys on every push to main.
+services:
+  - type: web
+    name: claimguard
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
